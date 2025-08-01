@@ -285,7 +285,26 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 		return ret;
 	}
 
-	hdma->Instance = LL_DMA_GET_CHANNEL_INSTANCE(stream->reg, stream->dma_channel);
+	hdma->Instance = __LL_DMA_GET_STREAM_INSTANCE(stream->reg, stream);
+
+	// == NEW =================================================================
+	hdma->Init.Channel             = DMA_CHANNEL_0;                     
+    hdma->Init.PeriphInc           = DMA_PINC_DISABLE;
+    hdma->Init.MemInc              = DMA_MINC_ENABLE;
+    hdma->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma->Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
+    hdma->Init.Mode                = DMA_CIRCULAR;
+    hdma->Init.Priority            = DMA_PRIORITY_HIGH;
+    hdma->Init.FIFOMode            = DMA_FIFOMODE_ENABLE;      
+    hdma->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_FULL;
+    hdma->Init.MemBurst            = DMA_MBURST_SINGLE;         
+    hdma->Init.PeriphBurst         = DMA_PBURST_SINGLE; 
+	hdma->Init.PeriphInc           = DMA_PINC_DISABLE;
+	hdma->Init.MemInc              = DMA_MINC_ENABLE;
+	// == NEW =================================================================
+
+	/*
+	== OLD =================================================================
 	hdma->Init.Request = dma_cfg.dma_slot;
 	hdma->Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
 	hdma->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
@@ -296,16 +315,18 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 	hdma->Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0;
 	hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
 	hdma->Init.Mode = DMA_NORMAL;
+	== OLD ====================================================================
+	*/
 
 	if (stream->dma_cfg.channel_direction == (enum dma_channel_direction)MEMORY_TO_PERIPHERAL) {
 		hdma->Init.Direction = DMA_MEMORY_TO_PERIPH;
-		hdma->Init.SrcInc = DMA_SINC_INCREMENTED;
-		hdma->Init.DestInc = DMA_DINC_FIXED;
+		// hdma->Init.SrcInc = DMA_SINC_INCREMENTED;
+		// hdma->Init.DestInc = DMA_DINC_FIXED;
 		__HAL_LINKDMA(hsai, hdmatx, dev_data->hdma);
 	} else {
 		hdma->Init.Direction = DMA_PERIPH_TO_MEMORY;
-		hdma->Init.SrcInc = DMA_SINC_FIXED;
-		hdma->Init.DestInc = DMA_DINC_INCREMENTED;
+		// hdma->Init.SrcInc = DMA_SINC_FIXED;
+		// hdma->Init.DestInc = DMA_DINC_INCREMENTED;
 		__HAL_LINKDMA(hsai, hdmarx, dev_data->hdma);
 	}
 
@@ -314,10 +335,12 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 		return -EIO;
 	}
 
+	/* OLD
 	if (HAL_DMA_ConfigChannelAttributes(&dev_data->hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
 		LOG_ERR("HAL_DMA_ConfigChannelAttributes: <Failed>");
 		return -EIO;
 	}
+	*/
 
 	return 0;
 }
@@ -427,21 +450,27 @@ static int i2s_stm32_sai_configure(const struct device *dev, enum i2s_dir dir,
 		return -EINVAL;
 	}
 
+    /* == NOT RELEVANT FOR F4 =================================================
 	if (cfg->mclk_enable && stream->master) {
+        // FIXME: No member named MckOutput
 		hsai->Init.MckOutput = SAI_MCK_OUTPUT_ENABLE;
 	} else {
+        // FIXME: No member named MckOutput
 		hsai->Init.MckOutput = SAI_MCK_OUTPUT_DISABLE;
 	}
+    ==========================================================================*/
 
 	if (cfg->mclk_div == (enum mclk_divider)MCLK_NO_DIV) {
 		hsai->Init.NoDivider = SAI_MASTERDIVIDER_DISABLED;
 	} else {
 		hsai->Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
+		/* OLD
 		if (cfg->mclk_div == (enum mclk_divider)MCLK_DIV_256) {
 			hsai->Init.MckOverSampling = SAI_MCK_OVERSAMPLING_DISABLE;
 		} else {
 			hsai->Init.MckOverSampling = SAI_MCK_OVERSAMPLING_ENABLE;
 		}
+		*/
 	}
 
 	/* AudioFrequency */
